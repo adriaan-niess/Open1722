@@ -17,6 +17,8 @@ add_library(open1722 SHARED
     "src/avtp/aaf/Pcm.c"
     "src/avtp/acf/FlexRay.c"
     "src/avtp/acf/Gpc.c"
+    "src/avtp/acf/Gbb.c"
+    "src/avtp/acf/Abb.c"
     "src/avtp/acf/Can.c"
     "src/avtp/acf/CanBrief.c"
     "src/avtp/acf/Lin.c"

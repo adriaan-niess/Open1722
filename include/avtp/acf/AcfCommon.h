@@ -59,7 +59,9 @@ typedef enum {
     AVTP_ACF_TYPE_SENSOR           = 0x8,
     AVTP_ACF_TYPE_SENSOR_BRIEF     = 0x9,
     AVTP_ACF_TYPE_AECP             = 0x10,
-    AVTP_ACF_TYPE_ANCILLARY        = 0x11
+    AVTP_ACF_TYPE_ANCILLARY        = 0x11,
+    AVTP_ACF_TYPE_BYTE_BUS         = 0x0D,
+    AVTP_ACF_TYPE_BYTE_BUS_BRIEF   = 0x0E,
 } Avtp_AcfMsgType_t;
 
 /**
