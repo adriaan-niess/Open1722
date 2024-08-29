@@ -94,6 +94,11 @@ add_executable(hello-world-listener "examples/hello-world/hello-world-listener.c
 target_include_directories(hello-world-listener PRIVATE "examples" "include")
 target_link_libraries(hello-world-listener open1722 open1722examples)
 
+# SPI talker app
+add_executable(gbb-talker "examples/acf-gbb/gbb-talker.c")
+target_include_directories(gbb-talker PRIVATE "examples" "include")
+target_link_libraries(gbb-talker open1722 open1722examples)
+
 #### Tests ####################################################################
 
 enable_testing()
