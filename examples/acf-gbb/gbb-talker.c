@@ -49,15 +49,15 @@
 #define REQUEST_TIMEOUT_MS 1000
 
 /**
- * Stream ID to used for SPI transmit requests.
+ * Stream ID to used for transmitting GBB requests.
  */
 #define REQUEST_STREAM_ID 0xAABBCCDDEEFF0001
 
 /**
- * Max size of SPI transmit. Should fit into a single Ethernet frame because
+ * Max size of GBB transmit. Should fit into a single Ethernet frame because
  * segmentation is not supported.
  */
-#define MAX_SPI_TRANSMIT_SIZE 1000
+#define MAX_GBB_TRANSMIT_SIZE 1000
 
 /**
  * Max number of in-flight requests
@@ -72,7 +72,7 @@
 typedef struct {
     Avtp_Ntscf_t ntscf;
     Avtp_Gbb_t gbb;
-} spi_avtp_pdu_t;
+} gbb_avtp_pdu_t;
 
 typedef struct {
     uint8_t num;
@@ -92,7 +92,7 @@ typedef struct {
     uint8_t dst_macaddr[ETH_ALEN];
     int response_timeout_ms;
     uint16_t byte_bus_id;
-} spi_talker_cfg_t;
+} gbb_talker_cfg_t;
 
 /**
  * State of SPI talker app.
@@ -122,11 +122,11 @@ typedef struct {
     int input_fd;
 
     /** Buffer to construct Ethernet frames for transmission */
-    uint8_t tx_buf[sizeof(spi_avtp_pdu_t) + MAX_SPI_TRANSMIT_SIZE];
+    uint8_t tx_buf[sizeof(gbb_avtp_pdu_t) + MAX_GBB_TRANSMIT_SIZE];
 
     /** Buffer for receiving Ethernet frames. */
-    uint8_t rx_buf[sizeof(spi_avtp_pdu_t) + MAX_SPI_TRANSMIT_SIZE];
-} spi_talker_t;
+    uint8_t rx_buf[sizeof(gbb_avtp_pdu_t) + MAX_GBB_TRANSMIT_SIZE];
+} gbb_talker_t;
 
 static struct argp_option argp_options[] = {
     {"dst-addr", 'd', "MACADDR", 0, "Stream Destination MAC address" },
@@ -137,13 +137,13 @@ static struct argp_option argp_options[] = {
 };
 
 error_t parse_args(int key, char *arg, struct argp_state *argp_state);
-void init_spi_talker(spi_talker_t* spi_talker, spi_talker_cfg_t* spi_talker_cfg);
-int remote_spi_transmit(spi_talker_t* spi_talker, uint8_t* write, uint8_t* read, uint16_t write_size, uint16_t read_size);
-int remote_spi_transmit_async(spi_talker_t* spi_talker, uint8_t* write, uint8_t* read, uint16_t write_size, uint16_t read_size);
+void init_gbb_talker(gbb_talker_t* gbb_talker, gbb_talker_cfg_t* gbb_talker_cfg);
+int remote_gbb_transmit(gbb_talker_t* gbb_talker, uint8_t* write, uint8_t* read, uint16_t write_size, uint16_t read_size);
+int remote_gbb_transmit_async(gbb_talker_t* gbb_talker, uint8_t* write, uint8_t* read, uint16_t write_size, uint16_t read_size);
 
 error_t parse_args(int key, char *arg, struct argp_state *argp_state)
 {
-    spi_talker_cfg_t* cfg = argp_state->input;
+    gbb_talker_cfg_t* cfg = argp_state->input;
 
     int res;
     switch (key) {
@@ -170,72 +170,72 @@ error_t parse_args(int key, char *arg, struct argp_state *argp_state)
     return 0;
 }
 
-void init_spi_talker(spi_talker_t* spi_talker, spi_talker_cfg_t* spi_talker_cfg)
+void init_gbb_talker(gbb_talker_t* gbb_talker, gbb_talker_cfg_t* gbb_talker_cfg)
 {
-    memset(spi_talker, 0, sizeof(spi_talker_t));
+    memset(gbb_talker, 0, sizeof(gbb_talker_t));
 
     // Copy configuration
-    spi_talker->priority = spi_talker_cfg->priority;
-    spi_talker->max_transit_time_ns = spi_talker_cfg->max_transit_time_ns;
-    spi_talker->response_timeout_ms = spi_talker_cfg->response_timeout_ms;
-    spi_talker->request_stream_id = spi_talker_cfg->request_stream_id;
-    spi_talker->byte_bus_id = spi_talker_cfg->byte_bus_id;
-    memcpy(spi_talker->dst_macaddr, spi_talker_cfg->dst_macaddr, ETH_ALEN);
-    memcpy(spi_talker->ifname, spi_talker_cfg->ifname, IFNAMSIZ);
+    gbb_talker->priority = gbb_talker_cfg->priority;
+    gbb_talker->max_transit_time_ns = gbb_talker_cfg->max_transit_time_ns;
+    gbb_talker->response_timeout_ms = gbb_talker_cfg->response_timeout_ms;
+    gbb_talker->request_stream_id = gbb_talker_cfg->request_stream_id;
+    gbb_talker->byte_bus_id = gbb_talker_cfg->byte_bus_id;
+    memcpy(gbb_talker->dst_macaddr, gbb_talker_cfg->dst_macaddr, ETH_ALEN);
+    memcpy(gbb_talker->ifname, gbb_talker_cfg->ifname, IFNAMSIZ);
 
-    spi_talker->seq_num = 0;
+    gbb_talker->seq_num = 0;
 
     // Check if interface name is not empty
-    if (strcmp(spi_talker->ifname, "") == 0) {
+    if (strcmp(gbb_talker->ifname, "") == 0) {
         fprintf(stderr, "No ifname argument was provided (-i, --ifname)\n");
         exit(EXIT_FAILURE);
     }
 
     // Open socket
-    spi_talker->socket_fd = create_talker_socket(spi_talker->priority);
-    if (spi_talker->socket_fd < 0) {
+    gbb_talker->socket_fd = create_talker_socket(gbb_talker->priority);
+    if (gbb_talker->socket_fd < 0) {
         fprintf(stderr, "Failed to open socket!\n");
         exit(EXIT_FAILURE);
     }
 
     // Set socket address
     int res = setup_socket_address(
-            spi_talker->socket_fd,
-            spi_talker->ifname,
-            spi_talker->dst_macaddr,
+            gbb_talker->socket_fd,
+            gbb_talker->ifname,
+            gbb_talker->dst_macaddr,
             ETH_P_TSN,
-            &spi_talker->dst_socket_addr);
+            &gbb_talker->dst_socket_addr);
     if (res < 0) {
         fprintf(stderr, "Failed to set up socket address!\n");
         exit(EXIT_FAILURE);
     }
 
     // Prepare TX buffer
-    spi_avtp_pdu_t* pdu = (spi_avtp_pdu_t*)spi_talker->tx_buf;
+    gbb_avtp_pdu_t* pdu = (gbb_avtp_pdu_t*)gbb_talker->tx_buf;
     Avtp_Ntscf_Init(&pdu->ntscf);
-    Avtp_Ntscf_SetStreamId(&pdu->ntscf, spi_talker->request_stream_id);
+    Avtp_Ntscf_SetStreamId(&pdu->ntscf, gbb_talker->request_stream_id);
     Avtp_Ntscf_SetSv(&pdu->ntscf, 1);
     Avtp_Gbb_Init(&pdu->gbb);
-    Avtp_Gbb_SetByteBusId(&pdu->gbb, spi_talker->byte_bus_id);
+    Avtp_Gbb_SetByteBusId(&pdu->gbb, gbb_talker->byte_bus_id);
     Avtp_Gbb_SetOp(&pdu->gbb, 0);
 }
 
-int remote_spi_transmit(spi_talker_t* spi_talker, uint8_t* write, uint8_t* read, uint16_t write_size, uint16_t read_size)
+int remote_gbb_transmit(gbb_talker_t* gbb_talker, uint8_t* write, uint8_t* read, uint16_t write_size, uint16_t read_size)
 {
-    // if (spi_talker->num_free_transaction_ids <= 0) {
+    // if (gbb_talker->num_free_transaction_ids <= 0) {
     //     fprintf(stderr, "Run out of transaction numbers!\n");
     //     return -EINVAL;
     // }
 
-    if (write_size > MAX_SPI_TRANSMIT_SIZE) {
+    if (write_size > MAX_GBB_TRANSMIT_SIZE) {
         fprintf(stderr, "Max SPI transmit size exceeded!\n");
         return -EINVAL;
     }
 
     uint8_t transaction_num = 42; // TODO obtain valid transaction number
     
-    spi_avtp_pdu_t* pdu = (spi_avtp_pdu_t*)spi_talker->tx_buf;
-    Avtp_Ntscf_SetSequenceNum(&pdu->ntscf, spi_talker->seq_num++);
+    gbb_avtp_pdu_t* pdu = (gbb_avtp_pdu_t*)gbb_talker->tx_buf;
+    Avtp_Ntscf_SetSequenceNum(&pdu->ntscf, gbb_talker->seq_num++);
     Avtp_Ntscf_SetNtscfDataLength(&pdu->ntscf, AVTP_GBB_HEADER_LEN + write_size);
     uint8_t padding = 0;
     Avtp_Gbb_SetAcfMsgLength(&pdu->gbb, (AVTP_GBB_HEADER_LEN + write_size) / 4); // TODO consider padding
@@ -245,12 +245,12 @@ int remote_spi_transmit(spi_talker_t* spi_talker, uint8_t* write, uint8_t* read,
     // Send to network
     size_t pdu_len = AVTP_NTSCF_HEADER_LEN + AVTP_GBB_HEADER_LEN + write_size + padding;
     int res = sendto(
-            spi_talker->socket_fd,
+            gbb_talker->socket_fd,
             pdu,
             pdu_len,
             0,
-            (struct sockaddr *)&spi_talker->dst_socket_addr,
-            sizeof(spi_talker->dst_socket_addr));
+            (struct sockaddr *)&gbb_talker->dst_socket_addr,
+            sizeof(gbb_talker->dst_socket_addr));
     if (res < 0) {
         fprintf(stderr, "Failed to transmit\n");
     }
@@ -258,7 +258,7 @@ int remote_spi_transmit(spi_talker_t* spi_talker, uint8_t* write, uint8_t* read,
     return 0;
 }
 
-int remote_spi_transmit_async(spi_talker_t* spi_talker, uint8_t* write, uint8_t* read, uint16_t write_size, uint16_t read_size)
+int remote_gbb_transmit_async(gbb_talker_t* gbb_talker, uint8_t* write, uint8_t* read, uint16_t write_size, uint16_t read_size)
 {
     // TODO
 }
@@ -266,7 +266,7 @@ int remote_spi_transmit_async(spi_talker_t* spi_talker, uint8_t* write, uint8_t*
 int main(int argc, char** argv)
 {
     // Parse command line arguments
-    spi_talker_cfg_t cfg = {0};
+    gbb_talker_cfg_t cfg = {0};
     struct argp argp = { argp_options, parse_args };
     argp_parse(&argp, argc, argv, 0, NULL, &cfg);
 
@@ -276,8 +276,8 @@ int main(int argc, char** argv)
     cfg.byte_bus_id = BYTE_BUS_ID;
 
     // Initialize talker app
-    spi_talker_t spi_talker;
-    init_spi_talker(&spi_talker, &cfg);
+    gbb_talker_t gbb_talker;
+    init_gbb_talker(&gbb_talker, &cfg);
 
     // Send data
     int count = 0;
@@ -285,7 +285,7 @@ int main(int argc, char** argv)
     uint8_t read[4];
     while (1) {
         // printf("Count %d\n", count++);
-        remote_spi_transmit(&spi_talker, write, read, 4, 4);
+        remote_gbb_transmit(&gbb_talker, write, read, 4, 4);
         usleep(1000 * 1000);
     }
 
