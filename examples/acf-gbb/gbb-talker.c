@@ -31,11 +31,13 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
-#include <argp.h>
+#include <inttypes.h>
 #include <unistd.h>
+#include <argp.h>
 #include <linux/if.h>
 #include <linux/if_ether.h>
 #include <linux/if_packet.h>
+#include <poll.h>
 
 #include "common/common.h"
 #include "avtp/CommonHeader.h"
@@ -46,12 +48,17 @@
 /**
  * Timeout when waiting for responses.
  */
-#define REQUEST_TIMEOUT_MS 1000
+#define TIMEOUT_MS 1000
 
 /**
  * Stream ID to used for transmitting GBB requests.
  */
 #define REQUEST_STREAM_ID 0xAABBCCDDEEFF0001
+
+/**
+ * Stream ID used to filter responses.
+ */
+#define RESPONSE_STREAM_ID 0xAABBCCDDEEFF0002
 
 /**
  * Max size of GBB transmit. Should fit into a single Ethernet frame because
@@ -60,11 +67,15 @@
 #define MAX_GBB_TRANSMIT_SIZE 1000
 
 /**
- * Max number of in-flight requests
+ * Default transaction number
  */
-#define MAX_PARALLEL_TRANSACTIONS ((1 << 8) - 1)
+#define TRANSACTION_NUM 1
 
 #define BYTE_BUS_ID 55
+
+#define ARGP_TRANSACTION_NUM_OPT 128
+
+#define ARGP_ASYNC_OPT 129
 
 /**
  * AVTP headers for transmitting GBB requests/responses.
@@ -74,40 +85,37 @@ typedef struct {
     Avtp_Gbb_t gbb;
 } gbb_avtp_pdu_t;
 
-typedef struct {
-    uint8_t num;
-    uint8_t in_use;
-    uint32_t timeout_s;
-    uint32_t timeout_ns;
-} transaction_number_t;
-
 /**
- * Configuration parameters for SPI talker app.
+ * Configuration parameters for GBB talker app.
  */
 typedef struct {
     char ifname[IFNAMSIZ];
     int priority;
     uint64_t max_transit_time_ns;
     uint64_t request_stream_id;
+    uint64_t response_stream_id;
     uint8_t dst_macaddr[ETH_ALEN];
-    int response_timeout_ms;
+    int timeout_ms;
     uint16_t byte_bus_id;
+    uint8_t transaction_num;
+    uint8_t async;
 } gbb_talker_cfg_t;
 
 /**
- * State of SPI talker app.
+ * State of GBB talker app.
  */
 typedef struct {
     char ifname[IFNAMSIZ];
     int priority;
     uint64_t max_transit_time_ns;
     uint64_t request_stream_id;
+    uint64_t response_stream_id;
     uint8_t dst_macaddr[ETH_ALEN];
 
     uint16_t byte_bus_id;
 
     /** Max time to wait for response */
-    int response_timeout_ms;
+    int timeout_ms;
 
     /** Sequence counter. */
     uint8_t seq_num;
@@ -121,11 +129,16 @@ typedef struct {
     /** File descriptor from whom the input data is red. */
     int input_fd;
 
+    /** Transaction number for GBB request. */
+    uint8_t transaction_num;
+
     /** Buffer to construct Ethernet frames for transmission */
     uint8_t tx_buf[sizeof(gbb_avtp_pdu_t) + MAX_GBB_TRANSMIT_SIZE];
 
     /** Buffer for receiving Ethernet frames. */
     uint8_t rx_buf[sizeof(gbb_avtp_pdu_t) + MAX_GBB_TRANSMIT_SIZE];
+
+    uint8_t async;
 } gbb_talker_t;
 
 static struct argp_option argp_options[] = {
@@ -133,13 +146,15 @@ static struct argp_option argp_options[] = {
     {"ifname", 'i', "IFNAME", 0, "Network Interface" },
     {"max-transit-time", 'm', "MSEC", 0, "Maximum Transit Time in ms" },
     {"prio", 'p', "NUM", 0, "SO_PRIORITY to be set in socket" },
+    {"tnum", ARGP_TRANSACTION_NUM_OPT, "TNUM", 0, "Transaction number to correlate GBB response with request" },
+    {"async", ARGP_ASYNC_OPT, NULL, 0, "No blocking wait for response" },
     { 0 }
 };
 
 error_t parse_args(int key, char *arg, struct argp_state *argp_state);
-void init_gbb_talker(gbb_talker_t* gbb_talker, gbb_talker_cfg_t* gbb_talker_cfg);
-int remote_gbb_transmit(gbb_talker_t* gbb_talker, uint8_t* write, uint8_t* read, uint16_t write_size, uint16_t read_size);
-int remote_gbb_transmit_async(gbb_talker_t* gbb_talker, uint8_t* write, uint8_t* read, uint16_t write_size, uint16_t read_size);
+void init_gbb_talker(gbb_talker_t* gbb_talker, gbb_talker_cfg_t* cfg);
+int gbb_request(gbb_talker_t* gbb_talker, uint8_t* write, uint16_t write_size, uint8_t* read, uint16_t read_size);
+int gbb_request_async(gbb_talker_t* gbb_talker, uint8_t* write, uint16_t write_size, uint8_t* read, uint16_t read_size);
 
 error_t parse_args(int key, char *arg, struct argp_state *argp_state)
 {
@@ -166,22 +181,31 @@ error_t parse_args(int key, char *arg, struct argp_state *argp_state)
     case 'p':
         cfg->priority = atoi(arg);
         break;
+    case ARGP_TRANSACTION_NUM_OPT:
+        cfg->transaction_num = atoi(arg);
+        break;
+    case ARGP_ASYNC_OPT:
+        cfg->async = 1;
+        break;
     }
     return 0;
 }
 
-void init_gbb_talker(gbb_talker_t* gbb_talker, gbb_talker_cfg_t* gbb_talker_cfg)
+void init_gbb_talker(gbb_talker_t* gbb_talker, gbb_talker_cfg_t* cfg)
 {
     memset(gbb_talker, 0, sizeof(gbb_talker_t));
 
     // Copy configuration
-    gbb_talker->priority = gbb_talker_cfg->priority;
-    gbb_talker->max_transit_time_ns = gbb_talker_cfg->max_transit_time_ns;
-    gbb_talker->response_timeout_ms = gbb_talker_cfg->response_timeout_ms;
-    gbb_talker->request_stream_id = gbb_talker_cfg->request_stream_id;
-    gbb_talker->byte_bus_id = gbb_talker_cfg->byte_bus_id;
-    memcpy(gbb_talker->dst_macaddr, gbb_talker_cfg->dst_macaddr, ETH_ALEN);
-    memcpy(gbb_talker->ifname, gbb_talker_cfg->ifname, IFNAMSIZ);
+    gbb_talker->priority = cfg->priority;
+    gbb_talker->max_transit_time_ns = cfg->max_transit_time_ns;
+    gbb_talker->timeout_ms = cfg->timeout_ms;
+    gbb_talker->request_stream_id = cfg->request_stream_id;
+    gbb_talker->response_stream_id = cfg->response_stream_id;
+    gbb_talker->byte_bus_id = cfg->byte_bus_id;
+    gbb_talker->transaction_num = cfg->transaction_num;
+    gbb_talker->async = cfg->async;
+    memcpy(gbb_talker->dst_macaddr, cfg->dst_macaddr, ETH_ALEN);
+    memcpy(gbb_talker->ifname, cfg->ifname, IFNAMSIZ);
 
     gbb_talker->seq_num = 0;
 
@@ -218,9 +242,10 @@ void init_gbb_talker(gbb_talker_t* gbb_talker, gbb_talker_cfg_t* gbb_talker_cfg)
     Avtp_Gbb_Init(&pdu->gbb);
     Avtp_Gbb_SetByteBusId(&pdu->gbb, gbb_talker->byte_bus_id);
     Avtp_Gbb_SetOp(&pdu->gbb, 0);
+    Avtp_Gbb_SetTransactionNum(&pdu->gbb, gbb_talker->transaction_num);
 }
 
-int remote_gbb_transmit(gbb_talker_t* gbb_talker, uint8_t* write, uint8_t* read, uint16_t write_size, uint16_t read_size)
+int gbb_request(gbb_talker_t* gbb_talker, uint8_t* write, uint16_t write_size, uint8_t* read, uint16_t read_size)
 {
     // if (gbb_talker->num_free_transaction_ids <= 0) {
     //     fprintf(stderr, "Run out of transaction numbers!\n");
@@ -228,7 +253,7 @@ int remote_gbb_transmit(gbb_talker_t* gbb_talker, uint8_t* write, uint8_t* read,
     // }
 
     if (write_size > MAX_GBB_TRANSMIT_SIZE) {
-        fprintf(stderr, "Max SPI transmit size exceeded!\n");
+        fprintf(stderr, "Max GBB transmit size exceeded!\n");
         return -EINVAL;
     }
 
@@ -236,14 +261,19 @@ int remote_gbb_transmit(gbb_talker_t* gbb_talker, uint8_t* write, uint8_t* read,
     
     gbb_avtp_pdu_t* pdu = (gbb_avtp_pdu_t*)gbb_talker->tx_buf;
     Avtp_Ntscf_SetSequenceNum(&pdu->ntscf, gbb_talker->seq_num++);
-    Avtp_Ntscf_SetNtscfDataLength(&pdu->ntscf, AVTP_GBB_HEADER_LEN + write_size);
-    uint8_t padding = 0;
-    Avtp_Gbb_SetAcfMsgLength(&pdu->gbb, (AVTP_GBB_HEADER_LEN + write_size) / 4); // TODO consider padding
+    uint8_t pad = write_size % 4;
+    if (pad > 0) {
+        pad = 4 - pad;
+    }
+    size_t gbb_len = AVTP_GBB_HEADER_LEN + write_size + pad;
+    Avtp_Ntscf_SetNtscfDataLength(&pdu->ntscf, gbb_len);
+    Avtp_Gbb_SetAcfMsgLength(&pdu->gbb, gbb_len / 4);
+    Avtp_Gbb_SetPad(&pdu->gbb, pad);
     Avtp_Gbb_SetReadSize(&pdu->gbb, read_size);
     memcpy(pdu->gbb.payload, write, write_size);
 
     // Send to network
-    size_t pdu_len = AVTP_NTSCF_HEADER_LEN + AVTP_GBB_HEADER_LEN + write_size + padding;
+    size_t pdu_len = AVTP_NTSCF_HEADER_LEN + gbb_len;
     int res = sendto(
             gbb_talker->socket_fd,
             pdu,
@@ -258,35 +288,65 @@ int remote_gbb_transmit(gbb_talker_t* gbb_talker, uint8_t* write, uint8_t* read,
     return 0;
 }
 
-int remote_gbb_transmit_async(gbb_talker_t* gbb_talker, uint8_t* write, uint8_t* read, uint16_t write_size, uint16_t read_size)
+int gbb_request_async(gbb_talker_t* gbb_talker, uint8_t* write, uint16_t write_size, uint8_t* read, uint16_t read_size)
 {
     // TODO
 }
 
 int main(int argc, char** argv)
 {
-    // Parse command line arguments
+    // Set static/default parameters
     gbb_talker_cfg_t cfg = {0};
+    cfg.timeout_ms = TIMEOUT_MS;
+    cfg.request_stream_id = REQUEST_STREAM_ID;
+    cfg.response_stream_id = RESPONSE_STREAM_ID;
+    cfg.byte_bus_id = BYTE_BUS_ID;
+    cfg.async = 0;
+
+    // Parse command line arguments
     struct argp argp = { argp_options, parse_args };
     argp_parse(&argp, argc, argv, 0, NULL, &cfg);
-
-    // Set static parameters
-    cfg.response_timeout_ms = REQUEST_TIMEOUT_MS;
-    cfg.request_stream_id = REQUEST_STREAM_ID;
-    cfg.byte_bus_id = BYTE_BUS_ID;
 
     // Initialize talker app
     gbb_talker_t gbb_talker;
     init_gbb_talker(&gbb_talker, &cfg);
 
     // Send data
-    int count = 0;
-    uint8_t write[4] = {0x1, 0x2, 0x3, 0x4};
-    uint8_t read[4];
-    while (1) {
-        // printf("Count %d\n", count++);
-        remote_gbb_transmit(&gbb_talker, write, read, 4, 4);
-        usleep(1000 * 1000);
+    uint8_t* payload = gbb_talker.tx_buf + sizeof(gbb_avtp_pdu_t);
+    ssize_t payload_len = read(STDIN_FILENO, payload, MAX_GBB_TRANSMIT_SIZE);
+    if (payload_len >= 0) {
+        size_t frame_size = sizeof(gbb_avtp_pdu_t) + payload_len;
+        gbb_request(&gbb_talker, gbb_talker.tx_buf, frame_size, NULL, 0);
+    }
+
+    // Wait for response
+    struct pollfd fds;
+    fds.fd = gbb_talker.socket_fd;
+    fds.events = POLLIN;
+    if (!gbb_talker.async) {
+        while (1) {
+            if (poll(&fds, 1, gbb_talker.timeout_ms) >= 0) {
+                if (fds.revents & POLLIN) {
+                    size_t max_len = sizeof(gbb_avtp_pdu_t) + MAX_GBB_TRANSMIT_SIZE;
+                    ssize_t pdu_len = read(fds.fd, gbb_talker.rx_buf, max_len);
+                    if (pdu_len > 0) {
+                        Avtp_CommonHeader_t* common_header = (Avtp_CommonHeader_t*)(gbb_talker.rx_buf);
+                        uint8_t subtype = Avtp_CommonHeader_GetSubtype(common_header);
+                        if (subtype == AVTP_SUBTYPE_NTSCF) {
+                            Avtp_Ntscf_t* ntscf = (Avtp_Ntscf_t*)common_header;
+                            uint64_t stream_id = Avtp_Ntscf_GetStreamId(ntscf);
+                            if (stream_id == gbb_talker.response_stream_id) {
+                                printf("Received response\n");
+                                // TODO handle response
+                            }
+                        }
+                    }
+                } else {
+                    fprintf(stderr, "Response timed out\n");
+                    break;
+                }
+            }
+        }
     }
 
     return EXIT_SUCCESS;
