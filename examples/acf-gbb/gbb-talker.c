@@ -135,8 +135,12 @@ typedef struct {
     /** Buffer to construct Ethernet frames for transmission */
     uint8_t tx_buf[sizeof(gbb_avtp_pdu_t) + MAX_GBB_TRANSMIT_SIZE];
 
+    size_t tx_buf_level;
+
     /** Buffer for receiving Ethernet frames. */
     uint8_t rx_buf[sizeof(gbb_avtp_pdu_t) + MAX_GBB_TRANSMIT_SIZE];
+
+    size_t rx_buf_level;
 
     uint8_t async;
 } gbb_talker_t;
@@ -152,9 +156,10 @@ static struct argp_option argp_options[] = {
 };
 
 error_t parse_args(int key, char *arg, struct argp_state *argp_state);
-void init_gbb_talker(gbb_talker_t* gbb_talker, gbb_talker_cfg_t* cfg);
-int gbb_request(gbb_talker_t* gbb_talker, uint8_t* write, uint16_t write_size, uint8_t* read, uint16_t read_size);
-int gbb_request_async(gbb_talker_t* gbb_talker, uint8_t* write, uint16_t write_size, uint8_t* read, uint16_t read_size);
+void gbb_talker_init(gbb_talker_t* gbb_talker, gbb_talker_cfg_t* cfg);
+int gbb_talker_send_request(gbb_talker_t* gbb_talker, uint8_t* write, uint16_t write_size, uint8_t* read, uint16_t read_size);
+int gbb_talker_send_request_async(gbb_talker_t* gbb_talker, uint8_t* write, uint16_t write_size, uint8_t* read, uint16_t read_size);
+int gbb_talker_handle_response(gbb_talker_t* gbb_talker);
 
 error_t parse_args(int key, char *arg, struct argp_state *argp_state)
 {
@@ -191,7 +196,7 @@ error_t parse_args(int key, char *arg, struct argp_state *argp_state)
     return 0;
 }
 
-void init_gbb_talker(gbb_talker_t* gbb_talker, gbb_talker_cfg_t* cfg)
+void gbb_talker_init(gbb_talker_t* gbb_talker, gbb_talker_cfg_t* cfg)
 {
     memset(gbb_talker, 0, sizeof(gbb_talker_t));
 
@@ -207,7 +212,10 @@ void init_gbb_talker(gbb_talker_t* gbb_talker, gbb_talker_cfg_t* cfg)
     memcpy(gbb_talker->dst_macaddr, cfg->dst_macaddr, ETH_ALEN);
     memcpy(gbb_talker->ifname, cfg->ifname, IFNAMSIZ);
 
+    // Static configuration
     gbb_talker->seq_num = 0;
+    gbb_talker->tx_buf_level = 0;
+    gbb_talker->rx_buf_level = 0;
 
     // Check if interface name is not empty
     if (strcmp(gbb_talker->ifname, "") == 0) {
@@ -245,7 +253,7 @@ void init_gbb_talker(gbb_talker_t* gbb_talker, gbb_talker_cfg_t* cfg)
     Avtp_Gbb_SetTransactionNum(&pdu->gbb, gbb_talker->transaction_num);
 }
 
-int gbb_request(gbb_talker_t* gbb_talker, uint8_t* write, uint16_t write_size, uint8_t* read, uint16_t read_size)
+int gbb_talker_send_request(gbb_talker_t* gbb_talker, uint8_t* write, uint16_t write_size, uint8_t* read, uint16_t read_size)
 {
     // if (gbb_talker->num_free_transaction_ids <= 0) {
     //     fprintf(stderr, "Run out of transaction numbers!\n");
@@ -288,9 +296,26 @@ int gbb_request(gbb_talker_t* gbb_talker, uint8_t* write, uint16_t write_size, u
     return 0;
 }
 
-int gbb_request_async(gbb_talker_t* gbb_talker, uint8_t* write, uint16_t write_size, uint8_t* read, uint16_t read_size)
+int gbb_talker_send_request_async(gbb_talker_t* gbb_talker, uint8_t* write, uint16_t write_size, uint8_t* read, uint16_t read_size)
 {
     // TODO
+}
+
+int gbb_talker_handle_response(gbb_talker_t* gbb_talker)
+{
+    Avtp_CommonHeader_t* common_header = (Avtp_CommonHeader_t*)(gbb_talker->rx_buf);
+    uint8_t subtype = Avtp_CommonHeader_GetSubtype(common_header);
+    Avtp_Gbb_t* gbb = NULL;
+    if (subtype == AVTP_SUBTYPE_NTSCF) {
+        Avtp_Ntscf_t* ntscf = (Avtp_Ntscf_t*)common_header;
+        uint64_t stream_id = Avtp_Ntscf_GetStreamId(ntscf);
+        if (stream_id == gbb_talker->response_stream_id) {
+            printf("Received response\n");
+            // TODO handle response
+            return 1;
+        }
+    }
+    return 0;
 }
 
 int main(int argc, char** argv)
@@ -309,14 +334,14 @@ int main(int argc, char** argv)
 
     // Initialize talker app
     gbb_talker_t gbb_talker;
-    init_gbb_talker(&gbb_talker, &cfg);
+    gbb_talker_init(&gbb_talker, &cfg);
 
     // Send data
     uint8_t* payload = gbb_talker.tx_buf + sizeof(gbb_avtp_pdu_t);
     ssize_t payload_len = read(STDIN_FILENO, payload, MAX_GBB_TRANSMIT_SIZE);
     if (payload_len >= 0) {
         size_t frame_size = sizeof(gbb_avtp_pdu_t) + payload_len;
-        gbb_request(&gbb_talker, gbb_talker.tx_buf, frame_size, NULL, 0);
+        gbb_talker_send_request(&gbb_talker, gbb_talker.tx_buf, frame_size, NULL, 0);
     }
 
     // Wait for response
@@ -329,16 +354,10 @@ int main(int argc, char** argv)
                 if (fds.revents & POLLIN) {
                     size_t max_len = sizeof(gbb_avtp_pdu_t) + MAX_GBB_TRANSMIT_SIZE;
                     ssize_t pdu_len = read(fds.fd, gbb_talker.rx_buf, max_len);
-                    if (pdu_len > 0) {
-                        Avtp_CommonHeader_t* common_header = (Avtp_CommonHeader_t*)(gbb_talker.rx_buf);
-                        uint8_t subtype = Avtp_CommonHeader_GetSubtype(common_header);
-                        if (subtype == AVTP_SUBTYPE_NTSCF) {
-                            Avtp_Ntscf_t* ntscf = (Avtp_Ntscf_t*)common_header;
-                            uint64_t stream_id = Avtp_Ntscf_GetStreamId(ntscf);
-                            if (stream_id == gbb_talker.response_stream_id) {
-                                printf("Received response\n");
-                                // TODO handle response
-                            }
+                    if (pdu_len > AVTP_ACF_COMMON_HEADER_LEN) {
+                        gbb_talker.rx_buf_level = pdu_len;
+                        if (gbb_talker_handle_response(&gbb_talker)) {
+                            break;
                         }
                     }
                 } else {
