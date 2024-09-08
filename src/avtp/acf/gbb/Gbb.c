@@ -37,7 +37,7 @@
 #include <string.h>
 
 #include "avtp/acf/AcfCommon.h"
-#include "avtp/acf/Gbb.h"
+#include "avtp/acf/gbb/Gbb.h"
 #include "avtp/Utils.h"
 #include "avtp/Defines.h"
 

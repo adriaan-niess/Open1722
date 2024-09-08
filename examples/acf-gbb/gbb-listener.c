@@ -42,7 +42,7 @@
 #include "avtp/CommonHeader.h"
 #include "avtp/acf/Ntscf.h"
 #include "avtp/acf/Tscf.h"
-#include "avtp/acf/Gbb.h"
+#include "avtp/acf/gbb/Gbb.h"
 
 /**
  * Stream ID to used for transmitting GBB requests.
