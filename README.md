@@ -61,6 +61,11 @@ $ cmake ..
 $ make
 ```
 
+On default, the example applications and tests are build. It's also possible to disable building examples or tests as shown below. This can be useful to cross-compile Open1722 for microcontrollers.
+```
+$ cmake -DBUILD_TESTS=off -DBUILD_EXAMPLES=off
+```
+
 The build can be cleaned using the following command:
 ```
 $ make clean
