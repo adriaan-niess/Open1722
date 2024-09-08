@@ -2,15 +2,16 @@ cmake_minimum_required(VERSION 3.20)
 
 project(Open1722 VERSION 0.1)
 
-option(BUILD_TESTS "Build tests" ON)
-option(BUILD_EXAMPLES "Build tests" ON)
+option(OPEN1722_BUILD_TESTS "Build tests" OFF)
+option(OPEN1722_BUILD_EXAMPLES "Build tests" OFF)
+option(BUILD_SHARED_LIBS "Build using shared libraries" ON)
 
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED TRUE)
 
 #### Libraries ################################################################
 
-add_library(open1722 SHARED
+set(SOURCES
     "src/avtp/CommonHeader.c"
     "src/avtp/Crf.c"
     "src/avtp/Rvf.c"
@@ -32,7 +33,15 @@ add_library(open1722 SHARED
     "src/avtp/cvf/Cvf.c"
     "src/avtp/cvf/H264.c"
     "src/avtp/cvf/Jpeg2000.c"
-    "src/avtp/cvf/Mjpeg.c")
+    "src/avtp/cvf/Mjpeg.c"
+)
+
+if(BUILD_SHARED_LIBS)
+    add_library(open1722 SHARED ${SOURCES})
+else()
+    add_library(open1722 STATIC ${SOURCES})
+endif()
+
 set_target_properties(open1722 PROPERTIES VERSION ${PROJECT_VERSION})
 
 target_include_directories(open1722 PRIVATE
@@ -41,7 +50,7 @@ target_include_directories(open1722 PRIVATE
 
 #### Examples #################################################################
 
-if (BUILD_EXAMPLES)
+if (OPEN1722_BUILD_EXAMPLES)
     # Common library accross all examples
     add_library(open1722examples STATIC "examples/common/common.c")
     target_include_directories(open1722examples PRIVATE "examples" "include")
@@ -99,7 +108,7 @@ endif()
 
 #### Tests ####################################################################
 
-if (BUILD_TESTS)
+if (OPEN1722_BUILD_TESTS)
     enable_testing()
 
     # find_package(cmocka 1.1.0 REQUIRED)
@@ -125,7 +134,7 @@ endif()
 install(TARGETS open1722 EXPORT Open1722Targets DESTINATION lib)
 install(DIRECTORY "include/" DESTINATION include)
 
-if (BUILD_EXAMPLES)
+if (OPEN1722_BUILD_EXAMPLES)
     install(TARGETS
         aaf-listener
         aaf-talker
