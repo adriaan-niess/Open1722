@@ -31,7 +31,8 @@ add_library(open1722 SHARED
     "src/avtp/cvf/Cvf.c"
     "src/avtp/cvf/H264.c"
     "src/avtp/cvf/Jpeg2000.c"
-    "src/avtp/cvf/Mjpeg.c")
+    "src/avtp/cvf/Mjpeg.c"
+    "src/osp/Frame.c")
 set_target_properties(open1722 PROPERTIES VERSION ${PROJECT_VERSION})
 
 target_include_directories(open1722 PRIVATE
