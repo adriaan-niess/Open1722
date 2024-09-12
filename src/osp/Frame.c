@@ -102,3 +102,21 @@ void Osp_Frame_SetPayloadLength(Osp_Frame_t* frame, uint8_t length)
         Osp_Frame_SetPsi(frame, length);
     }
 }
+
+uint8_t Osp_Frame_ComputeCrc(Osp_Frame_t* frame)
+{
+    uint8_t len = OSP_HEADER_LEN + Osp_Frame_GetPayloadLength(frame);
+
+    // TODO
+    return 0;
+}
+
+void Osp_Frame_UpdateCrc(Osp_Frame_t* frame)
+{
+    Osp_Frame_SetCrc(frame, Osp_Frame_ComputeCrc(frame));
+}
+
+uint8_t Osp_Frame_IsCrcValid(Osp_Frame_t* frame)
+{
+    return Osp_Frame_GetCrc(frame) == Osp_Frame_ComputeCrc(frame);
+}

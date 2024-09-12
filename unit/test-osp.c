@@ -371,6 +371,33 @@ static void Test_Osp_SetCrc_Length8(void **state)
     assert_true(memcmp(buf, expected, OSP_MAX_FRAME_LEN) == 0);
 }
 
+// static void Example_Osp_BuildFrame(void)
+// {
+//     // Build frame
+//     uint8_t buf[OSP_MAX_FRAME_LEN] = {0};
+//     Osp_Frame_t* frame = (Osp_Frame_t*)buf;
+//     Osp_Frame_Init(frame);
+//     Osp_Frame_SetAddress(frame, OSP_ADDRESS_RANGE_BEGIN);
+//     Osp_Frame_SetCommand(frame, OSP_COMMAND_INIT);
+//     Osp_Frame_SetPayloadLength(frame, 0);
+//     Osp_Frame_UpdateCrc(frame);
+
+//     // Print frame
+//     for (int i = 0; i < Osp_Frame_GetLength(frame); i++) {
+//         printf("%02hhX ", buf[i]);
+//         if (i == Osp_Frame_GetLength(frame) - 1) {
+//             printf("\n");
+//         }
+//     }
+
+//     // Parse (raw) fields
+//     uint8_t preamble = Osp_Frame_GetPreamble(frame);
+//     uint16_t address = Osp_Frame_GetAddress(frame);
+//     uint8_t psi = Osp_Frame_GetPsi(frame);
+//     uint8_t cmd = Osp_Frame_GetCommand(frame);
+//     uint8_t crc = Osp_Frame_GetCrc(frame);
+// }
+
 int main(void)
 {
     const struct CMUnitTest tests[] = {
@@ -412,5 +439,8 @@ int main(void)
         cmocka_unit_test(Test_Osp_SetCrc_Length6),
         cmocka_unit_test(Test_Osp_SetCrc_Length8),
     };
+
+    // Example_Osp_BuildFrame();
+
     return cmocka_run_group_tests(tests, NULL, NULL);
 }
