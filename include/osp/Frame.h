@@ -27,16 +27,16 @@ typedef struct {
 
 void Osp_Frame_Init(Osp_Frame_t* frame);
 
-uint8_t Osp_Frame_GetPreample(Osp_Frame_t* frame);
+uint8_t Osp_Frame_GetPreamble(Osp_Frame_t* frame);
 uint16_t Osp_Frame_GetAddress(Osp_Frame_t* frame);
 uint8_t Osp_Frame_GetPsi(Osp_Frame_t* frame);
 uint8_t Osp_Frame_GetCommand(Osp_Frame_t* frame);
 uint8_t Osp_Frame_GetCrc(Osp_Frame_t* frame);
 uint8_t* Osp_Frame_GetPayload(Osp_Frame_t* frame);
 uint8_t Osp_Frame_GetPayloadLength(Osp_Frame_t* frame);
-uint8_t Osp_Frame_GetFrameLength(Osp_Frame_t* frame);
+uint8_t Osp_Frame_GetLength(Osp_Frame_t* frame);
 
-void Osp_Frame_SetPreample(Osp_Frame_t* frame, uint8_t preamble);
+void Osp_Frame_SetPreamble(Osp_Frame_t* frame, uint8_t preamble);
 void Osp_Frame_SetAddress(Osp_Frame_t* frame, uint16_t address);
 void Osp_Frame_SetPsi(Osp_Frame_t* frame, uint8_t psi);
 void Osp_Frame_SetCommand(Osp_Frame_t* frame, uint8_t command);

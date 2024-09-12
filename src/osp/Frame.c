@@ -9,17 +9,17 @@
 void Osp_Frame_Init(Osp_Frame_t* frame)
 {
     memset(frame, 0, OSP_HEADER_LEN + OSP_TRAILER_LEN);
-    Osp_Frame_SetPreample(frame, OSP_PREAMBLE);
+    Osp_Frame_SetPreamble(frame, OSP_PREAMBLE);
 }
 
-uint8_t Osp_Frame_GetPreample(Osp_Frame_t* frame)
+uint8_t Osp_Frame_GetPreamble(Osp_Frame_t* frame)
 {
     return (frame->header[0] & 0xF0) >> 4;
 }
 
 uint16_t Osp_Frame_GetAddress(Osp_Frame_t* frame)
 {
-    return ((uint16_t)(frame->header[0] & 0x0F) << 8)
+    return ((uint16_t)(frame->header[0] & 0x0F) << 6)
             | ((frame->header[1] & 0xFC) >> 2);
 }
 
@@ -31,7 +31,7 @@ uint8_t Osp_Frame_GetPsi(Osp_Frame_t* frame)
 
 uint8_t Osp_Frame_GetCommand(Osp_Frame_t* frame)
 {
-    return frame->header[3] & 0x7F;
+    return frame->header[2] & 0x7F;
 }
 
 uint8_t Osp_Frame_GetCrc(Osp_Frame_t* frame)
@@ -59,7 +59,12 @@ uint8_t Osp_Frame_GetPayloadLength(Osp_Frame_t* frame)
     return len;
 }
 
-void Osp_Frame_SetPreample(Osp_Frame_t* frame, uint8_t preamble)
+uint8_t Osp_Frame_GetLength(Osp_Frame_t* frame)
+{
+    return OSP_HEADER_LEN + Osp_Frame_GetPayloadLength(frame) + OSP_TRAILER_LEN;
+}
+
+void Osp_Frame_SetPreamble(Osp_Frame_t* frame, uint8_t preamble)
 {
     frame->header[0] = (~0xF0 & frame->header[0]) | (0xF0 & (preamble << 4));
 }

@@ -117,6 +117,7 @@ list(APPEND TEST_TARGETS test-can)
 list(APPEND TEST_TARGETS test-crf)
 list(APPEND TEST_TARGETS test-cvf)
 list(APPEND TEST_TARGETS test-rvf)
+list(APPEND TEST_TARGETS test-osp)
 # list(APPEND TEST_TARGETS test-stream)
 
 foreach(TEST_TARGET IN LISTS TEST_TARGETS)
