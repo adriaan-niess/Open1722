@@ -186,7 +186,7 @@ static void Test_Osp_GetPayloadLength_Length8(void **state)
 
 static void Test_Osp_SetPreamble(void **state)
 {
-    uint8_t buf[OSP_MAX_FRAME_LEN] = {0x0};
+    uint8_t buf[OSP_MAX_FRAME_LEN] = {0};
     Osp_Frame_t* frame = (Osp_Frame_t*)buf;
     Osp_Frame_SetPreamble(frame, 0x9);
 
@@ -196,7 +196,7 @@ static void Test_Osp_SetPreamble(void **state)
 
 static void Test_Osp_SetAddress(void **state)
 {
-    uint8_t buf[OSP_MAX_FRAME_LEN] = {0x0};
+    uint8_t buf[OSP_MAX_FRAME_LEN] = {0};
     Osp_Frame_t* frame = (Osp_Frame_t*)buf;
     Osp_Frame_SetAddress(frame, 0x261);
 
@@ -206,7 +206,7 @@ static void Test_Osp_SetAddress(void **state)
 
 static void Test_Osp_SetPsi(void **state)
 {
-    uint8_t buf[OSP_MAX_FRAME_LEN] = {0x0};
+    uint8_t buf[OSP_MAX_FRAME_LEN] = {0};
     Osp_Frame_t* frame = (Osp_Frame_t*)buf;
     Osp_Frame_SetPsi(frame, 0x7);
 
@@ -216,7 +216,7 @@ static void Test_Osp_SetPsi(void **state)
 
 static void Test_Osp_SetCommand(void **state)
 {
-    uint8_t buf[OSP_MAX_FRAME_LEN] = {0x0,  0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0};
+    uint8_t buf[OSP_MAX_FRAME_LEN] = {0};
     Osp_Frame_t* frame = (Osp_Frame_t*)buf;
     Osp_Frame_SetCommand(frame, 0x41);
 
@@ -226,86 +226,149 @@ static void Test_Osp_SetCommand(void **state)
 
 static void Test_Osp_SetPayloadLength_Length0(void **state)
 {
-    // TODO
-    assert_true(0);
+    uint8_t buf[OSP_MAX_FRAME_LEN] = {0};
+    Osp_Frame_t* frame = (Osp_Frame_t*)buf;
+    Osp_Frame_SetPayloadLength(frame, 0);
+
+    uint8_t expected[OSP_MAX_FRAME_LEN] = {0x0, 0x0, 0x00, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0};
+    assert_true(memcmp(buf, expected, OSP_MAX_FRAME_LEN) == 0);
 }
 
 static void Test_Osp_SetPayloadLength_Length1(void **state)
 {
-    // TODO
-    assert_true(0);
+    uint8_t buf[OSP_MAX_FRAME_LEN] = {0};
+    Osp_Frame_t* frame = (Osp_Frame_t*)buf;
+    Osp_Frame_SetPayloadLength(frame, 1);
+
+    uint8_t expected[OSP_MAX_FRAME_LEN] = {0x0, 0x0, 0x80, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0};
+    assert_true(memcmp(buf, expected, OSP_MAX_FRAME_LEN) == 0);
 }
 
 static void Test_Osp_SetPayloadLength_Length2(void **state)
 {
-    // TODO
-    assert_true(0);
+    uint8_t buf[OSP_MAX_FRAME_LEN] = {0};
+    Osp_Frame_t* frame = (Osp_Frame_t*)buf;
+    Osp_Frame_SetPayloadLength(frame, 2);
+
+    uint8_t expected[OSP_MAX_FRAME_LEN] = {0x0, 0x01, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0};
+    assert_true(memcmp(buf, expected, OSP_MAX_FRAME_LEN) == 0);
 }
 
 static void Test_Osp_SetPayloadLength_Length3(void **state)
 {
-    // TODO
-    assert_true(0);
+    uint8_t buf[OSP_MAX_FRAME_LEN] = {0};
+    Osp_Frame_t* frame = (Osp_Frame_t*)buf;
+    Osp_Frame_SetPayloadLength(frame, 3);
+
+    uint8_t expected[OSP_MAX_FRAME_LEN] = {0x0, 0x01, 0x80, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0};
+    assert_true(memcmp(buf, expected, OSP_MAX_FRAME_LEN) == 0);
 }
 
 static void Test_Osp_SetPayloadLength_Length4(void **state)
 {
-    // TODO
-    assert_true(0);
+    uint8_t buf[OSP_MAX_FRAME_LEN] = {0};
+    Osp_Frame_t* frame = (Osp_Frame_t*)buf;
+    Osp_Frame_SetPayloadLength(frame, 4);
+
+    uint8_t expected[OSP_MAX_FRAME_LEN] = {0x0, 0x02, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0};
+    assert_true(memcmp(buf, expected, OSP_MAX_FRAME_LEN) == 0);
 }
 
 static void Test_Osp_SetPayloadLength_Length6(void **state)
 {
-    // TODO
-    assert_true(0);
+    uint8_t buf[OSP_MAX_FRAME_LEN] = {0};
+    Osp_Frame_t* frame = (Osp_Frame_t*)buf;
+    Osp_Frame_SetPayloadLength(frame, 6);
+
+    uint8_t expected[OSP_MAX_FRAME_LEN] = {0x0, 0x03, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0};
+    assert_true(memcmp(buf, expected, OSP_MAX_FRAME_LEN) == 0);
 }
 
 static void Test_Osp_SetPayloadLength_Length8(void **state)
 {
-    // TODO
-    assert_true(0);
+    uint8_t buf[OSP_MAX_FRAME_LEN] = {0};
+    Osp_Frame_t* frame = (Osp_Frame_t*)buf;
+    Osp_Frame_SetPayloadLength(frame, 8);
+
+    uint8_t expected[OSP_MAX_FRAME_LEN] = {0x0, 0x03, 0x80, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0};
+    assert_true(memcmp(buf, expected, OSP_MAX_FRAME_LEN) == 0);
 }
 
 static void Test_Osp_SetCrc_Length0(void **state)
 {
-    // TODO
-    assert_true(0);
+    uint8_t buf[OSP_MAX_FRAME_LEN] = {0};
+    Osp_Frame_t* frame = (Osp_Frame_t*)buf;
+    Osp_Frame_SetPayloadLength(frame, 0);
+    Osp_Frame_SetCrc(frame, 0xFE);
+
+    uint8_t expected[OSP_MAX_FRAME_LEN] = {0x0, 0x0, 0x0, 0xFE, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0};
+    assert_true(memcmp(buf, expected, OSP_MAX_FRAME_LEN) == 0);
 }
 
 static void Test_Osp_SetCrc_Length1(void **state)
 {
-    // TODO
-    assert_true(0);
+    uint8_t buf[OSP_MAX_FRAME_LEN] = {0};
+    Osp_Frame_t* frame = (Osp_Frame_t*)buf;
+    Osp_Frame_SetPayloadLength(frame, 1);
+    Osp_Frame_SetCrc(frame, 0xFE);
+
+    uint8_t expected[OSP_MAX_FRAME_LEN] = {0x0, 0x0, 0x80, 0x0, 0xFE, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0};
+    assert_true(memcmp(buf, expected, OSP_MAX_FRAME_LEN) == 0);
 }
 
 static void Test_Osp_SetCrc_Length2(void **state)
 {
-    // TODO
-    assert_true(0);
+    uint8_t buf[OSP_MAX_FRAME_LEN] = {0};
+    Osp_Frame_t* frame = (Osp_Frame_t*)buf;
+    Osp_Frame_SetPayloadLength(frame, 2);
+    Osp_Frame_SetCrc(frame, 0xFE);
+
+    uint8_t expected[OSP_MAX_FRAME_LEN] = {0x0, 0x01, 0x0, 0x0, 0x0, 0xFE, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0};
+    assert_true(memcmp(buf, expected, OSP_MAX_FRAME_LEN) == 0);
 }
 
 static void Test_Osp_SetCrc_Length3(void **state)
 {
-    // TODO
-    assert_true(0);
+    uint8_t buf[OSP_MAX_FRAME_LEN] = {0};
+    Osp_Frame_t* frame = (Osp_Frame_t*)buf;
+    Osp_Frame_SetPayloadLength(frame, 3);
+    Osp_Frame_SetCrc(frame, 0xFE);
+
+    uint8_t expected[OSP_MAX_FRAME_LEN] = {0x0, 0x01, 0x80, 0x0, 0x0, 0x0, 0xFE, 0x0, 0x0, 0x0, 0x0, 0x0};
+    assert_true(memcmp(buf, expected, OSP_MAX_FRAME_LEN) == 0);
 }
 
 static void Test_Osp_SetCrc_Length4(void **state)
 {
-    // TODO
-    assert_true(0);
+    uint8_t buf[OSP_MAX_FRAME_LEN] = {0};
+    Osp_Frame_t* frame = (Osp_Frame_t*)buf;
+    Osp_Frame_SetPayloadLength(frame, 4);
+    Osp_Frame_SetCrc(frame, 0xFE);
+
+    uint8_t expected[OSP_MAX_FRAME_LEN] = {0x0, 0x02, 0x0, 0x0, 0x0, 0x0, 0x0, 0xFE, 0x0, 0x0, 0x0, 0x0};
+    assert_true(memcmp(buf, expected, OSP_MAX_FRAME_LEN) == 0);
 }
 
 static void Test_Osp_SetCrc_Length6(void **state)
 {
-    // TODO
-    assert_true(0);
+    uint8_t buf[OSP_MAX_FRAME_LEN] = {0};
+    Osp_Frame_t* frame = (Osp_Frame_t*)buf;
+    Osp_Frame_SetPayloadLength(frame, 6);
+    Osp_Frame_SetCrc(frame, 0xFE);
+
+    uint8_t expected[OSP_MAX_FRAME_LEN] = {0x0, 0x03, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xFE, 0x0, 0x0};
+    assert_true(memcmp(buf, expected, OSP_MAX_FRAME_LEN) == 0);
 }
 
 static void Test_Osp_SetCrc_Length8(void **state)
 {
-    // TODO
-    assert_true(0);
+    uint8_t buf[OSP_MAX_FRAME_LEN] = {0};
+    Osp_Frame_t* frame = (Osp_Frame_t*)buf;
+    Osp_Frame_SetPayloadLength(frame, 8);
+    Osp_Frame_SetCrc(frame, 0xFE);
+
+    uint8_t expected[OSP_MAX_FRAME_LEN] = {0x0, 0x03, 0x80, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xFE};
+    assert_true(memcmp(buf, expected, OSP_MAX_FRAME_LEN) == 0);
 }
 
 int main(void)
