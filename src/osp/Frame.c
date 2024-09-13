@@ -106,9 +106,20 @@ void Osp_Frame_SetPayloadLength(Osp_Frame_t* frame, uint8_t length)
 uint8_t Osp_Frame_ComputeCrc(Osp_Frame_t* frame)
 {
     uint8_t len = OSP_HEADER_LEN + Osp_Frame_GetPayloadLength(frame);
-
-    // TODO
-    return 0;
+    uint8_t* frameBuf = (uint8_t*)frame;
+    uint8_t crc = OSP_CRC_INIT;
+    size_t i, j;
+    for (i = 0; i < len; i++) {
+        crc ^= frameBuf[i];
+        // TODO inner loop can be replaced with faster lookup table
+        for (j = 0; j < 8; j++) {
+            if ((crc & 0x80) != 0)
+                crc = (uint8_t)((crc << 1) ^ OSP_CRC_POLYNOMIAL);
+            else
+                crc <<= 1;
+        }
+    }
+    return crc ^ OSP_CRC_FINAL_XOR;
 }
 
 void Osp_Frame_UpdateCrc(Osp_Frame_t* frame)

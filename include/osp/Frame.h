@@ -66,6 +66,11 @@
 #define OSP_COMMAND_IDENTIFY        0x7
 #define OSP_COMMAND_PING4EVENT      0x8
 
+/* OSP checksum specific */
+#define OSP_CRC_POLYNOMIAL          0x97
+#define OSP_CRC_INIT                0x0
+#define OSP_CRC_FINAL_XOR           0x0
+
 /* Other OSP constants */
 #define OSP_PREAMBLE                0b1010
 

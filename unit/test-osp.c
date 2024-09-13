@@ -305,61 +305,6 @@ static void Test_Osp_SetCrc_Length0(void **state)
     assert_true(memcmp(buf, expected, OSP_MAX_FRAME_LEN) == 0);
 }
 
-static void Test_Osp_SetCrc_Length1(void **state)
-{
-    uint8_t buf[OSP_MAX_FRAME_LEN] = {0};
-    Osp_Frame_t* frame = (Osp_Frame_t*)buf;
-    Osp_Frame_SetPayloadLength(frame, 1);
-    Osp_Frame_SetCrc(frame, 0xFE);
-
-    uint8_t expected[OSP_MAX_FRAME_LEN] = {0x0, 0x0, 0x80, 0x0, 0xFE, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0};
-    assert_true(memcmp(buf, expected, OSP_MAX_FRAME_LEN) == 0);
-}
-
-static void Test_Osp_SetCrc_Length2(void **state)
-{
-    uint8_t buf[OSP_MAX_FRAME_LEN] = {0};
-    Osp_Frame_t* frame = (Osp_Frame_t*)buf;
-    Osp_Frame_SetPayloadLength(frame, 2);
-    Osp_Frame_SetCrc(frame, 0xFE);
-
-    uint8_t expected[OSP_MAX_FRAME_LEN] = {0x0, 0x01, 0x0, 0x0, 0x0, 0xFE, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0};
-    assert_true(memcmp(buf, expected, OSP_MAX_FRAME_LEN) == 0);
-}
-
-static void Test_Osp_SetCrc_Length3(void **state)
-{
-    uint8_t buf[OSP_MAX_FRAME_LEN] = {0};
-    Osp_Frame_t* frame = (Osp_Frame_t*)buf;
-    Osp_Frame_SetPayloadLength(frame, 3);
-    Osp_Frame_SetCrc(frame, 0xFE);
-
-    uint8_t expected[OSP_MAX_FRAME_LEN] = {0x0, 0x01, 0x80, 0x0, 0x0, 0x0, 0xFE, 0x0, 0x0, 0x0, 0x0, 0x0};
-    assert_true(memcmp(buf, expected, OSP_MAX_FRAME_LEN) == 0);
-}
-
-static void Test_Osp_SetCrc_Length4(void **state)
-{
-    uint8_t buf[OSP_MAX_FRAME_LEN] = {0};
-    Osp_Frame_t* frame = (Osp_Frame_t*)buf;
-    Osp_Frame_SetPayloadLength(frame, 4);
-    Osp_Frame_SetCrc(frame, 0xFE);
-
-    uint8_t expected[OSP_MAX_FRAME_LEN] = {0x0, 0x02, 0x0, 0x0, 0x0, 0x0, 0x0, 0xFE, 0x0, 0x0, 0x0, 0x0};
-    assert_true(memcmp(buf, expected, OSP_MAX_FRAME_LEN) == 0);
-}
-
-static void Test_Osp_SetCrc_Length6(void **state)
-{
-    uint8_t buf[OSP_MAX_FRAME_LEN] = {0};
-    Osp_Frame_t* frame = (Osp_Frame_t*)buf;
-    Osp_Frame_SetPayloadLength(frame, 6);
-    Osp_Frame_SetCrc(frame, 0xFE);
-
-    uint8_t expected[OSP_MAX_FRAME_LEN] = {0x0, 0x03, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xFE, 0x0, 0x0};
-    assert_true(memcmp(buf, expected, OSP_MAX_FRAME_LEN) == 0);
-}
-
 static void Test_Osp_SetCrc_Length8(void **state)
 {
     uint8_t buf[OSP_MAX_FRAME_LEN] = {0};
@@ -369,6 +314,54 @@ static void Test_Osp_SetCrc_Length8(void **state)
 
     uint8_t expected[OSP_MAX_FRAME_LEN] = {0x0, 0x03, 0x80, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xFE};
     assert_true(memcmp(buf, expected, OSP_MAX_FRAME_LEN) == 0);
+}
+
+static void Test_Osp_ComputeCrc_Length0(void **state)
+{
+    uint8_t buf[OSP_MAX_FRAME_LEN] = {0x70, 0xDC, 0x6D, 0x64, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0};
+    Osp_Frame_t* frame = (Osp_Frame_t*)buf;
+
+    assert_true(Osp_Frame_GetPayloadLength(frame) == 0);
+    assert_true(Osp_Frame_GetLength(frame) == 4);
+    assert_true(Osp_Frame_ComputeCrc(frame) == 0x64);
+    assert_true(Osp_Frame_ComputeCrc(frame) == Osp_Frame_GetCrc(frame));
+    assert_true(Osp_Frame_IsCrcValid(frame));
+}
+
+static void Test_Osp_ComputeCrc_Length8(void **state)
+{
+    uint8_t buf[OSP_MAX_FRAME_LEN] = {0x70, 0xDF, 0xED, 0x64, 0xD8, 0x96, 0x34, 0x0, 0xC, 0x21, 0xF6, 0x0};
+    Osp_Frame_t* frame = (Osp_Frame_t*)buf;
+
+    assert_true(Osp_Frame_GetPayloadLength(frame) == 8);
+    assert_true(Osp_Frame_GetLength(frame) == 12);
+    assert_true(Osp_Frame_ComputeCrc(frame) == 0x0);
+    assert_true(Osp_Frame_ComputeCrc(frame) == Osp_Frame_GetCrc(frame));
+    assert_true(Osp_Frame_IsCrcValid(frame));
+}
+
+static void Test_Osp_UpdateCrc_Length0(void **state)
+{
+    uint8_t buf[OSP_MAX_FRAME_LEN] = {0x70, 0xDC, 0x6D, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0};
+    Osp_Frame_t* frame = (Osp_Frame_t*)buf;
+    assert_true(!Osp_Frame_IsCrcValid(frame));
+
+    Osp_Frame_UpdateCrc(frame);
+
+    assert_true(buf[3] == 0x64);
+    assert_true(Osp_Frame_IsCrcValid(frame));
+}
+
+static void Test_Osp_UpdateCrc_Length8(void **state)
+{
+    uint8_t buf[OSP_MAX_FRAME_LEN] = {0x70, 0xDF, 0xED, 0x64, 0xD8, 0x96, 0x34, 0x0, 0xC, 0x21, 0xF6, 0x42};
+    Osp_Frame_t* frame = (Osp_Frame_t*)buf;
+    assert_true(!Osp_Frame_IsCrcValid(frame));
+
+    Osp_Frame_UpdateCrc(frame);
+
+    assert_true(buf[11] == 0x0);
+    assert_true(Osp_Frame_IsCrcValid(frame));
 }
 
 // static void Example_Osp_BuildFrame(void)
@@ -432,12 +425,11 @@ int main(void)
         cmocka_unit_test(Test_Osp_SetPayloadLength_Length6),
         cmocka_unit_test(Test_Osp_SetPayloadLength_Length8),
         cmocka_unit_test(Test_Osp_SetCrc_Length0),
-        cmocka_unit_test(Test_Osp_SetCrc_Length1),
-        cmocka_unit_test(Test_Osp_SetCrc_Length2),
-        cmocka_unit_test(Test_Osp_SetCrc_Length3),
-        cmocka_unit_test(Test_Osp_SetCrc_Length4),
-        cmocka_unit_test(Test_Osp_SetCrc_Length6),
         cmocka_unit_test(Test_Osp_SetCrc_Length8),
+        cmocka_unit_test(Test_Osp_ComputeCrc_Length0),
+        cmocka_unit_test(Test_Osp_ComputeCrc_Length8),
+        cmocka_unit_test(Test_Osp_UpdateCrc_Length0),
+        cmocka_unit_test(Test_Osp_UpdateCrc_Length8),
     };
 
     // Example_Osp_BuildFrame();
