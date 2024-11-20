@@ -163,11 +163,13 @@ int main()
     Avtp_Can_SetCanBusId(&pdu.can, 4);
     uint8_t canFrame[CAN_PAYLOAD_LEN] = {0x11, 0x22};
     memcpy(pdu.can.payload, canFrame, CAN_PAYLOAD_LEN);
+    Avtp_Can_Finalize(&pdu.can, CAN_PAYLOAD_LEN);
 
     // Init LIN ACF message
     Avtp_Lin_Init(&pdu.lin);
     uint8_t linFrame[LIN_PAYLOAD_LEN] = {0x11, 0x22, 0x33};
     memcpy(pdu.lin.payload, linFrame, LIN_PAYLOAD_LEN);
+    Avtp_Lin_Finalize(&pdu.lin, LIN_PAYLOAD_LEN);
 
     // Send packet to network using socket API ...
     uint8_t* data = &pdu;
