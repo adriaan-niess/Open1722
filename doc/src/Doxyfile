@@ -1,0 +1,21 @@
+# Doxyfile for Open1722 C API documentation
+
+PROJECT_NAME = "Open1722"
+PROJECT_NUMBER = "0.9"
+PROJECT_BRIEF = "IEEE 1722 and ACF Implementation"
+
+INPUT = ../../include ../../src
+RECURSIVE = YES
+EXCLUDE_PATTERNS = */test/* */unit/*
+
+FILE_PATTERNS = *.h *.c
+OUTPUT_DIRECTORY = _doxygen
+GENERATE_XML = YES
+GENERATE_HTML = NO
+GENERATE_LATEX = NO
+
+XML_OUTPUT = xml
+WARN_IF_UNDOCUMENTED = NO
+QUIET = YES
+STRIP_FROM_PATH = ../../
+STRIP_FROM_INC_PATH = ../../include
