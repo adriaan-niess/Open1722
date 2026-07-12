@@ -40,7 +40,7 @@ endif()
 target_compile_options(${LIB_NAME} PRIVATE
     $<$<C_COMPILER_ID:GNU,Clang>:-Wall -Wextra -Wconversion -Wsign-conversion>
 )
-target_include_directories(${LIB_NAME} PRIVATE
+target_include_directories(${LIB_NAME} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>)
 set_target_properties(${LIB_NAME} PROPERTIES VERSION ${PROJECT_VERSION})
