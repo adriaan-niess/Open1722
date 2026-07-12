@@ -27,6 +27,10 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifdef LINUX_KERNEL1722
     #include <linux/errno.h>
     #include <linux/string.h>
@@ -121,3 +125,7 @@ int avtp_pdu_set(struct avtp_common_pdu *pdu, Avtp_CommonHeaderField_t field,
         return 0;
     }
 }
+
+#ifdef __cplusplus
+}
+#endif
